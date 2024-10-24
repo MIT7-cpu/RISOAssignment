@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Converter with Light Bulbs</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bulb-on: #fcd34d;
+            --bulb-off: #94a3b8;
+            --wire-color: #475569;
+            --border-radius: 8px;
+            --spacing: 1rem;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            padding: var(--spacing);
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: var(--spacing);
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: var(--spacing);
+            margin-bottom: var(--spacing);
+            justify-content: center;
+        }
+
+        .bit-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .bit-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--primary-color);
+            background: transparent;
+            color: var(--primary-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .bit-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .circuit {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+            padding: var(--spacing);
+            background: #f8fafc;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+        }
+
+        .bulb-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem 0.5rem;
+            justify-content: center;
+            position: relative;
+            padding: 1rem 0;
+        }
+
+        .bulb-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .position-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-family: monospace;
+        }
+
+        .binary-value {
+            font-family: monospace;
+            font-size: 1.25rem;
+            text-align: center;
+            letter-spacing: 0.25rem;
+            margin: 1rem 0;
+            color: #1e293b;
+            background: white;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+        }
+
+        .decimal-panel {
+            text-align: center;
+            padding: 1rem;
+            background: #1e293b;
+            color: white;
+            border-radius: var(--border-radius);
+            margin-top: var(--spacing);
+        }
+
+        .decimal-panel h2 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            color: #94a3b8;
+        }
+
+        .decimal-value {
+            font-family: monospace;
+            font-size: 2rem;
+            color: #fcd34d;
+        }
+
+        @media (max-width: 768px) {
+            .binary-value {
+                font-size: 1rem;
+                letter-spacing: 0.125rem;
+            }
+
+            .bulb-container {
+                gap: 0.75rem 0.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Binary Converter</h1>
+
+        <div class="controls">
+            <div class="bit-selector">
+                <button class="bit-btn active" data-bits="8">8-bit</button>
+                <button class="bit-btn" data-bits="16">16-bit</button>
+                <button class="bit-btn" data-bits="32">32-bit</button>
+            </div>
+        </div>
+
+        <div class="circuit">
+            <div class="bulb-container" id="bulbContainer"></div>
+            <div class="binary-value" id="binaryValue">00000000</div>
+        </div>
+
+        <div class="decimal-panel">
+            <h2>Decimal Value</h2>
+            <div class="decimal-value" id="decimalValue">0</div>
+        </div>
+    </div>
+
+    <script>
+        class BinaryConverter {
+            constructor() {
+                this.currentBits = 8;
+                this.bulbContainer = document.getElementById('bulbContainer');
+                this.binaryValue = document.getElementById('binaryValue');
+                this.decimalValue = document.getElementById('decimalValue');
+                this.bulbStates = new Array(32).fill(0);
+                
+                this.initializeBitButtons();
+                this.createBulbs();
+                this.updateDisplay();
+            }
+
+            initializeBitButtons() {
+                document.querySelectorAll('.bit-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.bit-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentBits = parseInt(btn.dataset.bits);
+                        this.createBulbs();
+                        this.updateDisplay();
+                    });
+                });
+            }
+
+            createBulbs() {
+                this.bulbContainer.innerHTML = '';
+                
+                // Calculate rows needed (1 row for 8-bit, 2 rows for 16/32-bit)
+                const bulbsPerRow = this.currentBits <= 8 ? 8 : 16;
+                const rows = Math.ceil(this.currentBits / bulbsPerRow);
+                
+                for (let row = 0; row < rows; row++) {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.style.display = 'flex';
+                    rowDiv.style.gap = '0.5rem';
+                    rowDiv.style.justifyContent = 'center';
+                    
+                    const startIdx = row * bulbsPerRow;
+                    const endIdx = Math.min(startIdx + bulbsPerRow, this.currentBits);
+                    
+                    for (let i = startIdx; i < endIdx; i++) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'bulb-wrapper';
+                        
+                        const bulb = this.createBulbSVG();
+                        wrapper.appendChild(bulb);
+                        
+                        const position = document.createElement('div');
+                        position.className = 'position-label';
+                        position.textContent = this.currentBits - 1 - i;
+                        wrapper.appendChild(position);
+                        
+                        wrapper.addEventListener('click', () => this.toggleBulb(i));
+                        rowDiv.appendChild(wrapper);
+                        
+                        this.updateBulbState(bulb, this.bulbStates[i]);
+                    }
+                    
+                    this.bulbContainer.appendChild(rowDiv);
+                }
+            }
+
+            createBulbSVG() {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("viewBox", "0 0 24 24");
+                svg.setAttribute("width", "40");
+                svg.setAttribute("height", "40");
+
+                // Bulb base
+                const base = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                base.setAttribute("d", "M9 21h6v-2H9v2zm7-4H8v2h8v-2zm-1-4H9v2h6v-2zm3-8c0-2.76-2.24-5-5-5S8 2.24 8 5c0 2.05 1.23 3.81 3 4.58V12h2V9.58c1.77-.77 3-2.53 3-4.58z");
+                base.setAttribute("fill", "currentColor");
+
+                svg.appendChild(base);
+                return svg;
+            }
+
+            updateBulbState(bulb, state) {
+                bulb.style.color = state ? 'var(--bulb-on)' : 'var(--bulb-off)';
+            }
+
+            toggleBulb(index) {
+                this.bulbStates[index] = 1 - this.bulbStates[index];
+                this.updateDisplay();
+                
+                // Update the specific bulb's visual state
+                const bulbs = this.bulbContainer.querySelectorAll('svg');
+                this.updateBulbState(bulbs[index], this.bulbStates[index]);
+            }
+
+            updateDisplay() {
+                // Get the relevant portion of the bulb states based on current bit mode
+                const relevantStates = this.bulbStates.slice(0, this.currentBits);
+                
+                // Update binary display
+                this.binaryValue.textContent = relevantStates.join('');
+                
+                // Calculate decimal value
+                let decimal = 0n;
+                for (let i = 0; i < this.currentBits; i++) {
+                    if (relevantStates[i]) {
+                        decimal += 1n << BigInt(this.currentBits - 1 - i);
+                    }
+                }
+                
+                // Format decimal value with commas for readability
+                this.decimalValue.textContent = decimal.toString()
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+        }
+
+        // Initialize the converter
+        const converter = new BinaryConverter();
+    </script>
+</body>
+</html>

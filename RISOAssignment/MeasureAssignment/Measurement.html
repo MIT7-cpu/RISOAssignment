@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Measurement Converter</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --error-color: #dc2626;
+            --success-color: #16a34a;
+            --border-radius: 8px;
+            --spacing: 1rem;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            padding: var(--spacing);
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+
+        .converter {
+            background-color: white;
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: var(--spacing);
+            color: #333;
+        }
+
+        .input-group {
+            margin-bottom: var(--spacing);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .conversion-section {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: var(--spacing);
+            align-items: end;
+            margin-bottom: var(--spacing);
+        }
+
+        .swap-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.75rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .swap-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .result {
+            padding: 1rem;
+            margin-top: var(--spacing);
+            background-color: #f3f4f6;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-size: 1.25rem;
+            min-height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .error {
+            color: var(--error-color);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .error.visible {
+            display: block;
+        }
+
+        .actions {
+            display: flex;
+            gap: var(--spacing);
+            margin-top: var(--spacing);
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .reset-btn {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .reset-btn:hover {
+            background-color: #e5e7eb;
+        }
+
+        @media (max-width: 480px) {
+            .conversion-section {
+                grid-template-columns: 1fr;
+            }
+
+            .swap-icon {
+                transform: rotate(90deg);
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="converter">
+        <h1>Measurement Converter</h1>
+
+        <div class="input-group">
+            <label for="category">Category</label>
+            <select id="category">
+                <option value="length">Length</option>
+                <option value="weight">Weight</option>
+                <option value="temperature">Temperature</option>
+            </select>
+        </div>
+
+        <div class="conversion-section">
+            <div class="input-group">
+                <label for="fromUnit">From</label>
+                <select id="fromUnit"></select>
+                <input type="text" id="fromValue" placeholder="Enter value" inputmode="decimal">
+                <div class="error" id="error">Please enter a valid number</div>
+            </div>
+
+            <div class="swap-icon" id="swapBtn">⇄</div>
+
+            <div class="input-group">
+                <label for="toUnit">To</label>
+                <select id="toUnit"></select>
+            </div>
+        </div>
+
+        <div class="result" id="result">
+            Enter a value to see the conversion
+        </div>
+
+        <div class="actions">
+            <button class="reset-btn" id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const units = {
+            length: {
+                meters: 1,
+                kilometers: 1000,
+                centimeters: 0.01,
+                millimeters: 0.001,
+                inches: 0.0254,
+                feet: 0.3048,
+                yards: 0.9144,
+                miles: 1609.344
+            },
+            weight: {
+                grams: 1,
+                kilograms: 1000,
+                milligrams: 0.001,
+                ounces: 28.3495,
+                pounds: 453.592,
+                stones: 6350.29
+            },
+            temperature: {
+                celsius: 'C',
+                fahrenheit: 'F',
+                kelvin: 'K'
+            }
+        };
+
+        // DOM elements
+        const categorySelect = document.getElementById('category');
+        const fromUnitSelect = document.getElementById('fromUnit');
+        const toUnitSelect = document.getElementById('toUnit');
+        const fromValueInput = document.getElementById('fromValue');
+        const resultDiv = document.getElementById('result');
+        const errorDiv = document.getElementById('error');
+        const resetBtn = document.getElementById('resetBtn');
+        const swapBtn = document.getElementById('swapBtn');
+
+        // Populate unit dropdowns based on category
+        function populateUnits(category) {
+            const unitOptions = Object.keys(units[category]);
+            
+            fromUnitSelect.innerHTML = '';
+            toUnitSelect.innerHTML = '';
+            
+            unitOptions.forEach(unit => {
+                fromUnitSelect.add(new Option(unit, unit));
+                toUnitSelect.add(new Option(unit, unit));
+            });
+
+            // Set default 'to' unit to something different than 'from' unit
+            toUnitSelect.selectedIndex = 1;
+        }
+
+        // Convert temperature
+        function convertTemperature(value, fromUnit, toUnit) {
+            let celsius;
+            
+            // Convert to Celsius first
+            switch(fromUnit) {
+                case 'celsius':
+                    celsius = value;
+                    break;
+                case 'fahrenheit':
+                    celsius = (value - 32) * 5/9;
+                    break;
+                case 'kelvin':
+                    celsius = value - 273.15;
+                    break;
+            }
+
+            // Convert from Celsius to target unit
+            switch(toUnit) {
+                case 'celsius':
+                    return celsius;
+                case 'fahrenheit':
+                    return (celsius * 9/5) + 32;
+                case 'kelvin':
+                    return celsius + 273.15;
+            }
+        }
+
+        // Convert units
+        function convert() {
+            const category = categorySelect.value;
+            const fromUnit = fromUnitSelect.value;
+            const toUnit = toUnitSelect.value;
+            const fromValue = fromValueInput.value.trim();
+
+            // Validate input
+            if (fromValue === '') {
+                resultDiv.textContent = 'Enter a value to see the conversion';
+                errorDiv.classList.remove('visible');
+                return;
+            }
+
+            if (!/^-?\d*\.?\d+$/.test(fromValue)) {
+                errorDiv.classList.add('visible');
+                resultDiv.textContent = 'Invalid input';
+                return;
+            }
+
+            errorDiv.classList.remove('visible');
+            const value = parseFloat(fromValue);
+
+            let result;
+            if (category === 'temperature') {
+                result = convertTemperature(value, fromUnit, toUnit);
+            } else {
+                const baseValue = value * units[category][fromUnit];
+                result = baseValue / units[category][toUnit];
+            }
+
+            // Format result based on the magnitude
+            let formattedResult;
+            if (Math.abs(result) >= 1000000 || Math.abs(result) < 0.000001) {
+                formattedResult = result.toExponential(6);
+            } else {
+                formattedResult = result.toPrecision(7);
+            }
+
+            // Remove trailing zeros after decimal point
+            formattedResult = parseFloat(formattedResult).toString();
+
+            resultDiv.textContent = `${fromValue} ${fromUnit} = ${formattedResult} ${toUnit}`;
+        }
+
+        // Event listeners
+        categorySelect.addEventListener('change', () => {
+            populateUnits(categorySelect.value);
+            convert();
+        });
+
+        fromUnitSelect.addEventListener('change', convert);
+        toUnitSelect.addEventListener('change', convert);
+        fromValueInput.addEventListener('input', convert);
+
+        swapBtn.addEventListener('click', () => {
+            const tempUnit = fromUnitSelect.value;
+            const tempValue = fromValueInput.value;
+            
+            fromUnitSelect.value = toUnitSelect.value;
+            toUnitSelect.value = tempUnit;
+            
+            if (resultDiv.textContent !== 'Enter a value to see the conversion' && 
+                resultDiv.textContent !== 'Invalid input') {
+                const resultValue = resultDiv.textContent.split('=')[1].trim().split(' ')[0];
+                fromValueInput.value = resultValue;
+            }
+            
+            convert();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            fromValueInput.value = '';
+            resultDiv.textContent = 'Enter a value to see the conversion';
+            errorDiv.classList.remove('visible');
+        });
+
+        // Initialize
+        populateUnits(categorySelect.value);
+    </script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number to Words Converter</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --error-color: #dc2626;
+            --success-color: #16a34a;
+            --border-radius: 8px;
+            --spacing: 1rem;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            padding: var(--spacing);
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+
+        .converter {
+            background-color: white;
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: var(--spacing);
+            color: #333;
+        }
+
+        .input-section {
+            margin-bottom: var(--spacing);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            font-family: monospace;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .result {
+            padding: 1.5rem;
+            margin-top: var(--spacing);
+            background-color: #f8fafc;
+            border-radius: var(--border-radius);
+            min-height: 5rem;
+            border: 1px solid #e2e8f0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .error {
+            color: var(--error-color);
+            padding: 0.75rem;
+            background-color: #fee2e2;
+            border-radius: var(--border-radius);
+            margin-top: var(--spacing);
+            display: none;
+        }
+
+        .error.visible {
+            display: block;
+        }
+
+        .info {
+            margin-top: var(--spacing);
+            padding: var(--spacing);
+            background-color: #f0f9ff;
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            color: #075985;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="converter">
+        <h1>Number to Words Converter</h1>
+
+        <div class="input-section">
+            <label for="numberInput">Enter a number:</label>
+            <input 
+                type="text" 
+                id="numberInput" 
+                placeholder="Enter any integer (e.g., 123456789)"
+                inputmode="numeric"
+            >
+        </div>
+
+        <div class="error" id="error"></div>
+        <div class="result" id="result">Enter a number to see it converted to words</div>
+        
+        <div class="info">
+            This converter can handle numbers up to 10^66 (Vigintillion) and supports negative numbers.
+        </div>
+    </div>
+
+    <script>
+        class NumberToWordsConverter {
+            constructor() {
+                // Basic number words
+                this.units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 
+                            'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 
+                            'seventeen', 'eighteen', 'nineteen'];
+                
+                this.tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+                
+                // Scale names for large numbers
+                this.scales = [
+                    '', 'thousand', 'million', 'billion', 'trillion', 'quadrillion', 
+                    'quintillion', 'sextillion', 'septillion', 'octillion', 'nonillion', 
+                    'decillion', 'undecillion', 'duodecillion', 'tredecillion', 
+                    'quattuordecillion', 'quindecillion', 'sexdecillion', 'septendecillion', 
+                    'octodecillion', 'novemdecillion', 'vigintillion'
+                ];
+            }
+
+            // Convert a number under 1000 to words
+            convertHundreds(num) {
+                if (num === 0) return '';
+                
+                let words = '';
+                
+                // Handle hundreds
+                if (num >= 100) {
+                    words += this.units[Math.floor(num / 100)] + ' hundred';
+                    num %= 100;
+                    if (num > 0) words += ' and ';
+                }
+                
+                // Handle tens and units
+                if (num >= 20) {
+                    words += this.tens[Math.floor(num / 10)];
+                    if (num % 10 > 0) words += '-' + this.units[num % 10];
+                } else if (num > 0) {
+                    words += this.units[num];
+                }
+                
+                return words;
+            }
+
+            // Main conversion function
+            convert(num) {
+                // Handle invalid input
+                if (!Number.isInteger(Number(num))) {
+                    throw new Error('Please enter a valid integer');
+                }
+
+                // Handle zero
+                if (num === 0) return 'zero';
+
+                // Handle negative numbers
+                const isNegative = num < 0;
+                num = Math.abs(num);
+
+                // Convert to string and pad to ensure length is multiple of 3
+                let numStr = num.toString();
+                numStr = '0'.repeat((3 - numStr.length % 3) % 3) + numStr;
+
+                // Split into groups of three
+                const groups = numStr.match(/\d{3}/g);
+                
+                // Convert each group and combine with scale names
+                let words = [];
+                for (let i = 0; i < groups.length; i++) {
+                    const scale = this.scales[groups.length - 1 - i];
+                    const groupNum = parseInt(groups[i]);
+                    
+                    if (groupNum !== 0) {
+                        const groupWords = this.convertHundreds(groupNum);
+                        words.push(groupWords + (scale ? ' ' + scale : ''));
+                    }
+                }
+
+                // Combine all parts
+                let result = words.join(', ');
+                
+                // Add negative prefix if needed
+                if (isNegative) result = 'negative ' + result;
+                
+                // Clean up extra commas and spaces
+                result = result.replace(/,([^,]*)$/, ' and$1');
+                result = result.replace(/\s+/g, ' ').trim();
+                
+                return result;
+            }
+        }
+
+        // Initialize converter
+        const converter = new NumberToWordsConverter();
+
+        // DOM elements
+        const input = document.getElementById('numberInput');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+
+        // Convert on input
+        input.addEventListener('input', (e) => {
+            // Remove any non-digit characters except minus sign
+            const value = e.target.value.replace(/[^\d-]/g, '');
+            
+            // Ensure only one minus sign at the start
+            e.target.value = value.replace(/--+/g, '-').replace(/(.)-/g, '$1');
+            
+            try {
+                if (e.target.value === '') {
+                    result.textContent = 'Enter a number to see it converted to words';
+                    error.classList.remove('visible');
+                    return;
+                }
+
+                if (e.target.value === '-') {
+                    result.textContent = 'Please complete the number';
+                    error.classList.remove('visible');
+                    return;
+                }
+
+                const words = converter.convert(e.target.value);
+                result.textContent = words;
+                error.classList.remove('visible');
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.add('visible');
+                result.textContent = 'Invalid input';
+            }
+        });
+    </script>
+</body>
+</html>
